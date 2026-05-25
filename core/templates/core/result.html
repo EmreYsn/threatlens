@@ -1,0 +1,492 @@
+{% extends 'base.html' %}
+{% load threat_tags %}
+
+{% block title %}{{ ioc.value }}{% endblock %}
+
+{% block content %}
+<div class="container">
+
+    <!-- Header: IOC + Score Ring -->
+    <div class="result-header">
+        <div>
+            <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.5rem;">
+                <span class="ioc-type-badge">{{ ioc.get_ioc_type_display }}</span>
+                <span style="font-family:var(--font-mono);font-size:0.75rem;color:var(--text-muted);">
+                    {{ ioc.query_count }} sorgu · İlk: {{ ioc.first_seen|date:"d/m/Y" }}
+                </span>
+            </div>
+            <h1 class="result-ioc">{{ ioc.value }}</h1>
+
+            <!-- Tags -->
+            <div class="tags-container" style="margin-top:1rem;">
+                {% for tag in tags %}
+                <a href="{% url 'toggle_tag' ioc.id tag.id %}"
+                   class="tag {% if tag in ioc.tags.all %}active{% endif %}"
+                   style="color:{{ tag.color }};background:{{ tag.color }}15;">
+                    {% if tag in ioc.tags.all %}✓{% else %}+{% endif %} {{ tag.name }}
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Score Ring -->
+        <div class="score-ring">
+            <svg viewBox="0 0 120 120">
+                <circle class="ring-bg" cx="60" cy="60" r="54"/>
+                <circle class="ring-progress" cx="60" cy="60" r="54"
+                        stroke="{{ ioc.threat_score|score_color }}"
+                        stroke-dasharray="339.292"
+                        stroke-dashoffset="{{ ioc.threat_score|percentage_of:100 }}"/>
+            </svg>
+            <div class="score-text">
+                <span class="score-number" style="color:{{ ioc.threat_score|score_color }}">{{ ioc.threat_score }}</span>
+                <span class="score-label">{{ ioc.severity|severity_display }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Info Cards -->
+    {% if ioc.abuseipdb_data or ioc.virustotal_data or ioc.ipinfo_data or ioc.alienvault_data or ioc.shodan_data or ioc.whois_data %}
+    <div class="info-grid">
+        {% if ioc.ioc_type == 'ip' and ioc.abuseipdb_data %}
+        <div class="info-card">
+            <div class="info-card-title">◎ Genel Bilgiler</div>
+            <div class="info-row">
+                <span class="info-key">IP Adresi</span>
+                <span class="info-value">{{ ioc.abuseipdb_data.ip }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-key">ISP</span>
+                <span class="info-value">{{ ioc.abuseipdb_data.isp|default:"-" }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-key">Domain</span>
+                <span class="info-value">{{ ioc.abuseipdb_data.domain|default:"-" }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-key">Kullanım Tipi</span>
+                <span class="info-value">{{ ioc.abuseipdb_data.usage_type|default:"-" }}</span>
+            </div>
+        </div>
+
+        <div class="info-card">
+            <div class="info-card-title">⚑ Tehdit Bilgileri</div>
+            <div class="info-row">
+                <span class="info-key">Abuse Skoru</span>
+                <span class="info-value {{ ioc.abuseipdb_data.abuse_confidence_score|score_class }}">
+                    {{ ioc.abuseipdb_data.abuse_confidence_score }}/100
+                </span>
+            </div>
+            <div class="info-row">
+                <span class="info-key">Toplam Rapor</span>
+                <span class="info-value">{{ ioc.abuseipdb_data.total_reports }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-key">Raporlayan Kullanıcı</span>
+                <span class="info-value">{{ ioc.abuseipdb_data.num_distinct_users }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-key">Son Rapor</span>
+                <span class="info-value">{{ ioc.abuseipdb_data.last_reported_at|default:"Rapor yok" }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-key">Tor Exit Node</span>
+                <span class="info-value">{% if ioc.abuseipdb_data.is_tor %}Evet ⚠{% else %}Hayır{% endif %}</span>
+            </div>
+        </div>
+
+        {% if ioc.country %}
+        <div class="info-card">
+            <div class="info-card-title">⊕ Konum</div>
+            <div class="info-row">
+                <span class="info-key">Ülke</span>
+                <span class="info-value">{{ ioc.country }} ({{ ioc.country_code }})</span>
+            </div>
+            <div class="info-row">
+                <span class="info-key">ASN</span>
+                <span class="info-value">{{ ioc.asn|default:"-" }}</span>
+            </div>
+        </div>
+        {% endif %}
+        {% endif %}
+
+        <!-- VirusTotal Card -->
+    {% if ioc.virustotal_data %}
+    <div class="info-card">
+        <div class="info-card-title">⬡ VirusTotal</div>
+        <div class="info-row">
+            <span class="info-key">Kötü Tespit</span>
+            <span class="info-value score-critical">{{ ioc.virustotal_data.malicious }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-key">Şüpheli</span>
+            <span class="info-value score-suspicious">{{ ioc.virustotal_data.suspicious }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-key">Zararsız</span>
+            <span class="info-value score-safe">{{ ioc.virustotal_data.harmless }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-key">Toplam Motor</span>
+            <span class="info-value">{{ ioc.virustotal_data.total_vendors }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-key">Reputation</span>
+            <span class="info-value">{{ ioc.virustotal_data.reputation }}</span>
+        </div>
+        {% if ioc.virustotal_data.meaningful_name %}
+        <div class="info-row">
+            <span class="info-key">Dosya Adı</span>
+            <span class="info-value">{{ ioc.virustotal_data.meaningful_name }}</span>
+        </div>
+        {% endif %}
+        {% if ioc.virustotal_data.type_description %}
+        <div class="info-row">
+            <span class="info-key">Dosya Tipi</span>
+            <span class="info-value">{{ ioc.virustotal_data.type_description }}</span>
+        </div>
+        {% endif %}
+        {% if ioc.virustotal_data.scan_submitted %}
+        <div class="info-row">
+            <span class="info-key">Durum</span>
+            <span class="info-value score-suspicious">Tarama başlatıldı, sonuç bekleniyor</span>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- ipinfo Card -->
+    {% if ioc.ipinfo_data %}
+    <div class="info-card">
+        <div class="info-card-title">⊕ Konum Detayı (ipinfo)</div>
+        <div class="info-row">
+            <span class="info-key">Şehir</span>
+            <span class="info-value">{{ ioc.ipinfo_data.city|default:"-" }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-key">Bölge</span>
+            <span class="info-value">{{ ioc.ipinfo_data.region|default:"-" }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-key">Ülke</span>
+            <span class="info-value">{{ ioc.ipinfo_data.country_name|default:"-" }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-key">Organizasyon</span>
+            <span class="info-value">{{ ioc.ipinfo_data.org_name|default:"-" }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-key">ASN</span>
+            <span class="info-value">{{ ioc.ipinfo_data.asn|default:"-" }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-key">Hostname</span>
+            <span class="info-value">{{ ioc.ipinfo_data.hostname|default:"-" }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-key">Zaman Dilimi</span>
+            <span class="info-value">{{ ioc.ipinfo_data.timezone|default:"-" }}</span>
+        </div>
+        {% if ioc.ipinfo_data.is_bogon %}
+        <div class="info-row">
+            <span class="info-key">Bogon IP</span>
+            <span class="info-value score-suspicious">Evet ⚠</span>
+        </div>
+        {% endif %}
+        {% if ioc.ipinfo_data.is_anycast %}
+        <div class="info-row">
+            <span class="info-key">Anycast</span>
+            <span class="info-value">Evet</span>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- AlienVault OTX Card -->
+    {% if ioc.alienvault_data %}
+    <div class="info-card">
+        <div class="info-card-title">◈ AlienVault OTX</div>
+        <div class="info-row">
+            <span class="info-key">Pulse Sayısı</span>
+            <span class="info-value {% if ioc.alienvault_data.pulse_count > 0 %}score-suspicious{% else %}score-safe{% endif %}">
+                {{ ioc.alienvault_data.pulse_count }}
+            </span>
+        </div>
+        {% if ioc.alienvault_data.threat_score %}
+        <div class="info-row">
+            <span class="info-key">Tehdit Skoru</span>
+            <span class="info-value">{{ ioc.alienvault_data.threat_score }}</span>
+        </div>
+        {% endif %}
+        {% if ioc.alienvault_data.activities %}
+        <div class="info-row">
+            <span class="info-key">Aktiviteler</span>
+            <span class="info-value">
+                {% for act in ioc.alienvault_data.activities %}
+                    {{ act }}{% if not forloop.last %}, {% endif %}
+                {% endfor %}
+            </span>
+        </div>
+        {% endif %}
+        {% if ioc.alienvault_data.pulse_names %}
+        <div style="margin-top:0.75rem;padding-top:0.75rem;border-top:1px solid var(--border);">
+            <div class="info-key" style="margin-bottom:0.5rem;">İlişkili Pulse'lar:</div>
+            {% for pulse in ioc.alienvault_data.pulse_names %}
+            <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:0.25rem;">• {{ pulse }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Shodan Card -->
+    {% if ioc.shodan_data and ioc.shodan_data.found %}
+    <div class="info-card">
+        <div class="info-card-title">⚡ Shodan</div>
+        <div class="info-row">
+            <span class="info-key">Açık Port Sayısı</span>
+            <span class="info-value {% if ioc.shodan_data.port_count > 10 %}score-critical{% elif ioc.shodan_data.port_count > 5 %}score-suspicious{% else %}score-safe{% endif %}">
+                {{ ioc.shodan_data.port_count }}
+            </span>
+        </div>
+        {% if ioc.shodan_data.os %}
+        <div class="info-row">
+            <span class="info-key">İşletim Sistemi</span>
+            <span class="info-value">{{ ioc.shodan_data.os }}</span>
+        </div>
+        {% endif %}
+        {% if ioc.shodan_data.org %}
+        <div class="info-row">
+            <span class="info-key">Organizasyon</span>
+            <span class="info-value">{{ ioc.shodan_data.org }}</span>
+        </div>
+        {% endif %}
+        {% if ioc.shodan_data.vuln_count %}
+        <div class="info-row">
+            <span class="info-key">Güvenlik Açığı</span>
+            <span class="info-value score-critical">{{ ioc.shodan_data.vuln_count }} CVE</span>
+        </div>
+        {% endif %}
+
+        <!-- Açık Portlar -->
+        {% if ioc.shodan_data.ports %}
+        <div style="margin-top:0.75rem;padding-top:0.75rem;border-top:1px solid var(--border);">
+            <div class="info-key" style="margin-bottom:0.5rem;">Açık Portlar:</div>
+            <div style="display:flex;flex-wrap:wrap;gap:0.4rem;">
+                {% for port in ioc.shodan_data.ports %}
+                <span style="background:var(--bg-secondary);padding:0.2rem 0.5rem;border-radius:4px;
+                             font-family:var(--font-mono);font-size:0.75rem;color:var(--accent);">
+                    {{ port }}
+                </span>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Servisler -->
+        {% if ioc.shodan_data.services %}
+        <div style="margin-top:0.75rem;padding-top:0.75rem;border-top:1px solid var(--border);">
+            <div class="info-key" style="margin-bottom:0.5rem;">Servisler:</div>
+            {% for svc in ioc.shodan_data.services %}
+            <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:0.3rem;">
+                <span style="color:var(--accent);">:{{ svc.port }}/{{ svc.transport }}</span>
+                {% if svc.product %} — {{ svc.product }}{% if svc.version %} {{ svc.version }}{% endif %}{% endif %}
+                {% if svc.module %}<span style="opacity:0.5;"> ({{ svc.module }})</span>{% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Güvenlik Açıkları -->
+        {% if ioc.shodan_data.vulns %}
+        <div style="margin-top:0.75rem;padding-top:0.75rem;border-top:1px solid var(--border);">
+            <div class="info-key" style="margin-bottom:0.5rem;color:#e74c3c;">Güvenlik Açıkları (CVE):</div>
+            <div style="display:flex;flex-wrap:wrap;gap:0.4rem;">
+                {% for cve in ioc.shodan_data.vulns %}
+                <span style="background:rgba(231,76,60,0.15);padding:0.2rem 0.5rem;border-radius:4px;
+                             font-family:var(--font-mono);font-size:0.75rem;color:#e74c3c;">
+                    {{ cve }}
+                </span>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- WHOIS Card -->
+    {% if ioc.whois_data and ioc.whois_data.found %}
+    <div class="info-card">
+        <div class="info-card-title">⊞ WHOIS</div>
+        <div class="info-row">
+            <span class="info-key">Registrar</span>
+            <span class="info-value">{{ ioc.whois_data.registrar|default:"-" }}</span>
+        </div>
+        {% if ioc.whois_data.creation_date %}
+        <div class="info-row">
+            <span class="info-key">Kayıt Tarihi</span>
+            <span class="info-value">{{ ioc.whois_data.creation_date }}</span>
+        </div>
+        {% endif %}
+        {% if ioc.whois_data.expiration_date %}
+        <div class="info-row">
+            <span class="info-key">Bitiş Tarihi</span>
+            <span class="info-value">{{ ioc.whois_data.expiration_date }}</span>
+        </div>
+        {% endif %}
+        {% if ioc.whois_data.domain_age_days != None %}
+        <div class="info-row">
+            <span class="info-key">Domain Yaşı</span>
+            <span class="info-value {% if ioc.whois_data.domain_age_days < 90 %}score-critical{% elif ioc.whois_data.domain_age_days < 365 %}score-suspicious{% else %}score-safe{% endif %}">
+                {{ ioc.whois_data.domain_age_days }} gün
+            </span>
+        </div>
+        {% endif %}
+        {% if ioc.whois_data.org %}
+        <div class="info-row">
+            <span class="info-key">Organizasyon</span>
+            <span class="info-value">{{ ioc.whois_data.org }}</span>
+        </div>
+        {% endif %}
+        {% if ioc.whois_data.country %}
+        <div class="info-row">
+            <span class="info-key">Ülke</span>
+            <span class="info-value">{{ ioc.whois_data.country }}</span>
+        </div>
+        {% endif %}
+        {% if ioc.whois_data.dnssec %}
+        <div class="info-row">
+            <span class="info-key">DNSSEC</span>
+            <span class="info-value">{{ ioc.whois_data.dnssec }}</span>
+        </div>
+        {% endif %}
+
+        <!-- Name Servers -->
+        {% if ioc.whois_data.name_servers %}
+        <div style="margin-top:0.75rem;padding-top:0.75rem;border-top:1px solid var(--border);">
+            <div class="info-key" style="margin-bottom:0.5rem;">Name Servers:</div>
+            {% for ns in ioc.whois_data.name_servers %}
+            <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:0.2rem;">{{ ns }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Status -->
+        {% if ioc.whois_data.status %}
+        <div style="margin-top:0.75rem;padding-top:0.75rem;border-top:1px solid var(--border);">
+            <div class="info-key" style="margin-bottom:0.5rem;">Status:</div>
+            <div style="display:flex;flex-wrap:wrap;gap:0.4rem;">
+                {% for st in ioc.whois_data.status %}
+                <span style="background:var(--bg-secondary);padding:0.2rem 0.5rem;border-radius:4px;
+                             font-family:var(--font-mono);font-size:0.7rem;color:var(--text-muted);">
+                    {{ st }}
+                </span>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    </div>
+    {% endif %}
+
+    <!-- Coğrafi Harita -->
+    {% if ioc.ipinfo_data.latitude and ioc.ipinfo_data.longitude %}
+    <div class="map-container">
+        <div class="section-title">Coğrafi Konum</div>
+        <div id="ioc-map"></div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        try {
+            var lat = parseFloat('{{ ioc.ipinfo_data.latitude }}');
+            var lon = parseFloat('{{ ioc.ipinfo_data.longitude }}');
+
+            if (isNaN(lat) || isNaN(lon)) return;
+
+            var map = L.map('ioc-map').setView([lat, lon], 6);
+
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; OpenStreetMap &copy; CARTO',
+                maxZoom: 19
+            }).addTo(map);
+
+            var markerColor = '{{ ioc.threat_score|score_color }}';
+
+            var icon = L.divIcon({
+                html: '<div style="background:' + markerColor + ';width:16px;height:16px;border-radius:50%;border:3px solid white;box-shadow:0 0 10px ' + markerColor + ';"></div>',
+                className: '',
+                iconSize: [22, 22],
+                iconAnchor: [11, 11]
+            });
+
+            L.marker([lat, lon], {icon: icon}).addTo(map)
+                .bindPopup(
+                    '<div style="font-family:monospace;font-size:12px;">' +
+                    '<b>{{ ioc.value }}</b><br>' +
+                    '{{ ioc.ipinfo_data.city|default:"" }}, {{ ioc.ipinfo_data.country_name|default:"" }}<br>' +
+                    'Org: {{ ioc.ipinfo_data.org_name|default:"" }}<br>' +
+                    'Skor: <span style="color:' + markerColor + ';">{{ ioc.threat_score }}/100</span>' +
+                    '</div>'
+                )
+                .openPopup();
+
+            // Haritayı düzgün render etmesi için resize tetikle
+            setTimeout(function() { map.invalidateSize(); }, 200);
+
+        } catch(e) {
+            console.log('Harita yüklenemedi:', e);
+        }
+    });
+    </script>
+    {% endif %}
+
+    <!-- Score Breakdown -->
+    {% if breakdown %}
+    <div class="section-title">Skor Detayı</div>
+    {% for item in breakdown %}
+    <div class="breakdown-item">
+        <div class="breakdown-header">
+            <span class="breakdown-source">{{ item.source }} <small style="color:var(--text-muted);">(ağırlık: %{{ item.weight }})</small></span>
+            <span class="breakdown-score {{ item.score|score_class }}">{{ item.score }}/100</span>
+        </div>
+        <div class="breakdown-bar">
+            <div class="breakdown-fill" style="width:{{ item.score }}%;background:{{ item.score|score_color }};"></div>
+        </div>
+        <div class="breakdown-details">{{ item.details }}</div>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <!-- Notes -->
+    <div style="margin-top:2rem;">
+        <div class="section-title">Notlar</div>
+
+        {% for note in notes %}
+        <div class="note-item">
+            {{ note.content }}
+            <div class="note-meta">{{ note.created_at|date:"d/m/Y H:i" }}</div>
+        </div>
+        {% empty %}
+        <p style="color:var(--text-muted);font-size:0.85rem;margin-bottom:1rem;">Henüz not eklenmemiş.</p>
+        {% endfor %}
+
+        <form method="post" action="{% url 'add_note' ioc.id %}" class="note-form" style="margin-top:1rem;">
+            {% csrf_token %}
+            <textarea name="content" placeholder="Bu IOC hakkında not ekleyin..." rows="3" required></textarea>
+            <button type="submit" class="btn btn-primary btn-sm" style="margin-top:0.5rem;">Not Ekle</button>
+        </form>
+    </div>
+
+    <div style="margin-top:2rem;display:flex;gap:1rem;flex-wrap:wrap;">
+        <a href="{% url 'index' %}" class="btn">← Yeni Sorgu</a>
+        <a href="{% url 'rescan' ioc.id %}" class="btn" style="border-color:var(--accent);color:var(--accent);">↻ Yeniden Sorgula</a>
+        <a href="{% url 'export_pdf' ioc.id %}" class="btn btn-primary">↓ PDF İndir</a>
+        {% if user.is_authenticated and ioc.user == user or user.is_staff %}
+        <a href="{% url 'delete_ioc' ioc.id %}" class="btn" style="border-color:#e74c3c;color:#e74c3c;margin-left:auto;">🗑 Sil</a>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

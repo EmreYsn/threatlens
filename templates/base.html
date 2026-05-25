@@ -1,0 +1,104 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="tr" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}ThreatLens{% endblock %} | Tehdit İstihbaratı</title>
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    {% block extra_css %}{% endblock %}
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+</head>
+<body>
+    <nav class="navbar">
+        <a href="{% url 'index' %}" class="nav-brand">
+            <span class="brand-icon">◉</span>
+            ThreatLens
+        </a>
+        <ul class="nav-links">
+            <li><a href="{% url 'index' %}" class="{% if request.resolver_match.url_name == 'index' %}active{% endif %}">SORGULA</a></li>
+            <li><a href="{% url 'history' %}" class="{% if request.resolver_match.url_name == 'history' %}active{% endif %}">GEÇMİŞ</a></li>
+            <li><a href="{% url 'bulk_search' %}" class="{% if request.resolver_match.url_name == 'bulk_search' %}active{% endif %}">TOPLU SORGU</a></li>
+            <li><a href="{% url 'compare' %}" class="{% if request.resolver_match.url_name == 'compare' %}active{% endif %}">KARŞILAŞTIR</a></li>
+            <li><a href="{% url 'dashboard' %}" class="{% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">DASHBOARD</a></li>
+            {% if user.is_authenticated %}
+            <li style="margin-left:1rem;border-left:1px solid var(--border);padding-left:1rem;">
+                <span style="color:var(--accent);font-size:0.75rem;">{{ user.username }}</span>
+            </li>
+            <li>
+                <a href="{% url 'profile' %}" class="{% if request.resolver_match.url_name == 'profile' %}active{% endif %}">PROFİL</a>
+            </li>
+            <li>
+                <form method="post" action="{% url 'logout' %}" style="display:inline;">
+                    {% csrf_token %}
+                    <button type="submit" style="background:none;border:none;color:#e74c3c;cursor:pointer;
+                            font-family:var(--font-mono);font-size:inherit;letter-spacing:inherit;
+                            text-transform:uppercase;padding:0;">ÇIKIŞ</button>
+                </form>
+            </li>
+            {% else %}
+            <li style="margin-left:1rem;border-left:1px solid var(--border);padding-left:1rem;">
+                <a href="{% url 'login' %}" class="{% if request.resolver_match.url_name == 'login' %}active{% endif %}">GİRİŞ</a>
+            </li>
+            <li>
+                <a href="{% url 'register' %}" class="{% if request.resolver_match.url_name == 'register' %}active{% endif %}" style="color:var(--accent);">KAYIT OL</a>
+            </li>
+            {% endif %}
+        </ul>
+        <button class="theme-toggle" onclick="toggleTheme()" title="Tema Değiştir" aria-label="Tema değiştir">☀</button>
+    </nav>
+
+    {% if messages %}
+    <div class="container">
+        <div class="messages">
+            {% for message in messages %}
+            <div class="message {{ message.tags }}">{{ message }}</div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% block content %}{% endblock %}
+
+    <script src="{% static 'js/main.js' %}"></script>
+    {% block extra_js %}{% endblock %}
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+        <!-- Footer -->
+    <footer style="margin-top:4rem;padding:2rem 1rem;border-top:1px solid var(--border);text-align:center;">
+        <div style="max-width:800px;margin:0 auto;">
+            <div style="font-family:var(--font-mono);font-size:0.85rem;color:var(--accent);margin-bottom:0.5rem;">
+                <span style="color:var(--accent);">›_</span> ThreatLens
+            </div>
+            <p style="font-size:0.75rem;color:var(--text-muted);margin-bottom:0.75rem;">
+                Siber Tehdit İstihbaratı Platformu — 6 OSINT kaynağından otomatik tehdit analizi
+            </p>
+            <div style="display:flex;justify-content:center;gap:1rem;flex-wrap:wrap;font-size:0.7rem;color:var(--text-muted);">
+                <span>AbuseIPDB</span>
+                <span>•</span>
+                <span>VirusTotal</span>
+                <span>•</span>
+                <span>AlienVault OTX</span>
+                <span>•</span>
+                <span>Shodan</span>
+                <span>•</span>
+                <span>ipinfo.io</span>
+                <span>•</span>
+                <span>WHOIS</span>
+            </div>
+            <p style="font-size:0.7rem;color:var(--text-muted);margin-top:1rem;">
+                Geliştirici: <a href="https://ysnemre.com" target="_blank" style="color:var(--accent);text-decoration:none;">Yasin Emre</a>
+                · 2026
+            </p>
+        </div>
+    </footer>
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="spinner"></div>
+        <div class="loading-text">Sorgulanıyor...</div>
+    </div>
+    
+</body>
+</html>

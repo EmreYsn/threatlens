@@ -1,0 +1,114 @@
+{% extends 'base.html' %}
+{% load threat_tags %}
+
+{% block title %}Sorgula | Tehdit İstihbaratı{% endblock %}
+
+{% block content %}
+<div class="container">
+
+    <!-- Hero / Search -->
+    <div class="hero">
+        <h1 style="font-family:var(--font-mono);font-size:1.8rem;margin-bottom:0.5rem;">
+            <span style="color:var(--accent);">›_</span> ThreatLens
+        </h1>
+        <p style="color:var(--text-muted);margin-bottom:1.5rem;font-size:0.9rem;">
+            IP, Domain, URL, Hash veya Email analiz edin — 6 kaynaktan tehdit istihbaratı
+        </p>
+
+        <form method="post" action="{% url 'search' %}" class="search-form">
+            {% csrf_token %}
+            <div style="display:flex;gap:0.5rem;max-width:600px;margin:0 auto;">
+                <input type="text" name="query"
+                       placeholder="8.8.8.8 / evil.com / hash / email..."
+                       autocomplete="off" required
+                       style="flex:1;padding:0.75rem 1rem;background:var(--bg-secondary);
+                              color:var(--text);border:1px solid var(--border);border-radius:8px;
+                              font-family:var(--font-mono);font-size:0.95rem;">
+                <button type="submit" class="btn btn-primary" style="padding:0.75rem 1.5rem;">
+                    Sorgula
+                </button>
+            </div>
+        </form>
+
+        <!-- Desteklenen tipler -->
+        <div style="display:flex;justify-content:center;gap:0.75rem;margin-top:1rem;flex-wrap:wrap;">
+            <span class="ioc-type-badge">IP</span>
+            <span class="ioc-type-badge">Domain</span>
+            <span class="ioc-type-badge">URL</span>
+            <span class="ioc-type-badge">Hash</span>
+            <span class="ioc-type-badge">Email</span>
+        </div>
+    </div>
+
+    <!-- İstatistik Kartları -->
+    {% if stats.total > 0 %}
+    <div class="stats-bar" style="margin-top:2rem;">
+        <div class="stat-item">
+            <div class="stat-number" style="color:var(--accent);">{{ stats.total }}</div>
+            <div class="stat-label">Toplam IOC</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number score-critical">{{ stats.malicious }}</div>
+            <div class="stat-label">Tehlikeli</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number score-suspicious">{{ stats.suspicious }}</div>
+            <div class="stat-label">Şüpheli</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number score-safe">{{ stats.safe }}</div>
+            <div class="stat-label">Güvenli</div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Kaynaklar -->
+    <div style="margin-top:2rem;text-align:center;">
+        <div class="section-title">Entegre Kaynaklar</div>
+        <div style="display:flex;justify-content:center;gap:1.5rem;flex-wrap:wrap;margin-top:1rem;">
+            <div style="text-align:center;opacity:0.7;">
+                <div style="font-size:1.2rem;">🛡</div>
+                <div style="font-size:0.75rem;color:var(--text-muted);">AbuseIPDB</div>
+            </div>
+            <div style="text-align:center;opacity:0.7;">
+                <div style="font-size:1.2rem;">⬡</div>
+                <div style="font-size:0.75rem;color:var(--text-muted);">VirusTotal</div>
+            </div>
+            <div style="text-align:center;opacity:0.7;">
+                <div style="font-size:1.2rem;">◈</div>
+                <div style="font-size:0.75rem;color:var(--text-muted);">AlienVault</div>
+            </div>
+            <div style="text-align:center;opacity:0.7;">
+                <div style="font-size:1.2rem;">⚡</div>
+                <div style="font-size:0.75rem;color:var(--text-muted);">Shodan</div>
+            </div>
+            <div style="text-align:center;opacity:0.7;">
+                <div style="font-size:1.2rem;">⊕</div>
+                <div style="font-size:0.75rem;color:var(--text-muted);">ipinfo.io</div>
+            </div>
+            <div style="text-align:center;opacity:0.7;">
+                <div style="font-size:1.2rem;">⊞</div>
+                <div style="font-size:0.75rem;color:var(--text-muted);">WHOIS</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Son Sorgular -->
+    {% if recent_queries %}
+    <div style="margin-top:2.5rem;">
+        <div class="section-title">Son Sorgular</div>
+        <div class="query-list">
+            {% for ioc in recent_queries %}
+            <a href="{% url 'result' ioc.id %}" class="query-item">
+                <span class="ioc-type-badge">{{ ioc.get_ioc_type_display }}</span>
+                <span class="query-value">{{ ioc.value }}</span>
+                <span class="query-score {{ ioc.threat_score|score_class }}">{{ ioc.threat_score }}/100</span>
+                <span class="query-time">{{ ioc.last_queried|timesince }} önce</span>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

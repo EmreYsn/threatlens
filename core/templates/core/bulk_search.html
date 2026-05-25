@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+{% load threat_tags %}
+
+{% block title %}Toplu Sorgulama{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="section-title" style="margin-top:1rem;">Toplu IOC Sorgulama (CSV)</div>
+
+    <div class="info-card" style="max-width:600px;">
+        <div class="info-card-title">↑ CSV Dosyası Yükle</div>
+        <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:1rem;">
+            Her satırda bir IOC olacak şekilde CSV veya TXT dosyası yükleyin. Maksimum 50 IOC.
+        </p>
+
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div style="margin-bottom:1rem;">
+                <input type="file" name="csv_file" accept=".csv,.txt"
+                       style="font-family:var(--font-mono);font-size:0.85rem;color:var(--text);
+                              background:var(--bg-secondary);border:1px solid var(--border);
+                              padding:0.5rem;border-radius:6px;width:100%;">
+            </div>
+            <button type="submit" class="btn btn-primary">Sorgula</button>
+        </form>
+
+        <div style="margin-top:1.5rem;padding-top:1rem;border-top:1px solid var(--border);">
+            <div class="info-key" style="margin-bottom:0.5rem;">Örnek CSV formatı:</div>
+            <pre style="font-size:0.8rem;color:var(--text-muted);background:var(--bg-secondary);
+                        padding:0.75rem;border-radius:6px;overflow-x:auto;">8.8.8.8
+1.1.1.1
+malware.wicar.org
+218.92.0.76
+44d88612fea8a8f36de82e1278abb02f</pre>
+        </div>
+    </div>
+
+    <!-- Hatalar -->
+    {% if errors %}
+    <div class="section-title" style="margin-top:2rem;">Hatalar ({{ errors|length }})</div>
+    <div class="query-list">
+        {% for err in errors %}
+        <div class="query-item" style="color:var(--danger);">
+            <span class="query-value">{{ err.value }}</span>
+            <span style="font-size:0.8rem;">{{ err.error }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Sonuçlar -->
+    {% if results %}
+    <div class="section-title" style="margin-top:2rem;">Sonuçlar ({{ results|length }})</div>
+    <div class="query-list">
+        {% for ioc in results %}
+        <a href="{% url 'result' ioc.id %}" class="query-item">
+            <span class="ioc-type-badge">{{ ioc.get_ioc_type_display }}</span>
+            <span class="query-value">{{ ioc.value }}</span>
+            <span class="query-score {{ ioc.threat_score|score_class }}">{{ ioc.threat_score }}/100</span>
+            <span class="query-time">{{ ioc.severity|severity_display }}</span>
+        </a>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div style="margin-top:2rem;">
+        <a href="{% url 'index' %}" class="btn">← Ana Sayfa</a>
+    </div>
+</div>
+{% endblock %}

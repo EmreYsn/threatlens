@@ -1,0 +1,156 @@
+{% extends 'base.html' %}
+{% load threat_tags %}
+
+{% block title %}Profil — {{ user.username }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Profil Header -->
+    <div style="display:flex;align-items:center;gap:1.5rem;margin-top:1.5rem;margin-bottom:2rem;">
+        <div style="width:64px;height:64px;border-radius:50%;background:var(--accent);
+                    display:flex;align-items:center;justify-content:center;
+                    font-size:1.5rem;font-weight:700;color:var(--bg);font-family:var(--font-mono);">
+            {{ user.username|first|upper }}
+        </div>
+        <div>
+            <h1 style="font-family:var(--font-mono);font-size:1.3rem;margin:0;">{{ user.username }}</h1>
+            <p style="color:var(--text-muted);font-size:0.85rem;margin:0.25rem 0;">{{ user.email }}</p>
+            <p style="color:var(--text-muted);font-size:0.75rem;margin:0;">
+                Kayıt: {{ user.date_joined|date:"d/m/Y" }} · Son giriş: {{ user.last_login|date:"d/m/Y H:i" }}
+            </p>
+        </div>
+    </div>
+
+    <!-- İstatistikler -->
+    <div class="stats-bar">
+        <div class="stat-item">
+            <div class="stat-number" style="color:var(--accent);">{{ total_iocs }}</div>
+            <div class="stat-label">IOC'lerim</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number">{{ total_queries }}</div>
+            <div class="stat-label">Sorgularım</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number score-critical">{{ malicious_count }}</div>
+            <div class="stat-label">Tehlikeli</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number score-suspicious">{{ suspicious_count }}</div>
+            <div class="stat-label">Şüpheli</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number score-safe">{{ safe_count }}</div>
+            <div class="stat-label">Güvenli</div>
+        </div>
+    </div>
+
+    <!-- API Key Yönetimi -->
+    <div style="margin-top:2rem;">
+        <div class="section-title">API Erişimi</div>
+        <div class="info-card">
+            {% if api_key %}
+            <div class="info-row">
+                <span class="info-key">API Key</span>
+                <span class="info-value">
+                    <code id="api-key-text" style="font-size:0.75rem;background:var(--bg-secondary);
+                                padding:0.3rem 0.5rem;border-radius:4px;word-break:break-all;">
+                        {{ api_key.key }}
+                    </code>
+                    <button onclick="navigator.clipboard.writeText('{{ api_key.key }}');this.textContent='Kopyalandı!';setTimeout(()=>this.textContent='Kopyala',2000)"
+                            style="margin-left:0.5rem;padding:0.2rem 0.5rem;font-size:0.7rem;
+                                   background:var(--accent);color:var(--bg);border:none;border-radius:4px;cursor:pointer;">
+                        Kopyala
+                    </button>
+                </span>
+            </div>
+            <div class="info-row">
+                <span class="info-key">Durum</span>
+                <span class="info-value {% if api_key.is_active %}score-safe{% else %}score-critical{% endif %}">
+                    {% if api_key.is_active %}Aktif{% else %}Devre Dışı{% endif %}
+                </span>
+            </div>
+            <div class="info-row">
+                <span class="info-key">Bugünkü Kullanım</span>
+                <span class="info-value">{{ api_key.requests_today }} / 100</span>
+            </div>
+            <div class="info-row">
+                <span class="info-key">Oluşturulma</span>
+                <span class="info-value">{{ api_key.created_at|date:"d/m/Y H:i" }}</span>
+            </div>
+            <div style="margin-top:1rem;display:flex;gap:0.75rem;">
+                <a href="{% url 'generate_api_key' %}" class="btn btn-sm"
+                   onclick="return confirm('Mevcut API key geçersiz olacak. Devam?')"
+                   style="border-color:#e74c3c;color:#e74c3c;">↻ Key Yenile</a>
+                <a href="{% url 'api_docs_page' %}" class="btn btn-sm btn-primary">Dokümantasyon →</a>
+            </div>
+            {% else %}
+            <p style="color:var(--text-muted);font-size:0.85rem;margin-bottom:1rem;">
+                Henüz API key'iniz yok. REST API'yi kullanmak için key oluşturun.
+            </p>
+            <a href="{% url 'generate_api_key' %}" class="btn btn-primary btn-sm">API Key Oluştur</a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- En Tehlikeli IOC'ler -->
+    {% if top_threats %}
+    <div style="margin-top:2rem;">
+        <div class="section-title">En Tehlikeli IOC'lerim</div>
+        <div class="query-list">
+            {% for ioc in top_threats %}
+            <a href="{% url 'result' ioc.id %}" class="query-item">
+                <span class="ioc-type-badge">{{ ioc.get_ioc_type_display }}</span>
+                <span class="query-value">{{ ioc.value }}</span>
+                <span class="query-score {{ ioc.threat_score|score_class }}">{{ ioc.threat_score }}/100</span>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- En Çok Sorgulanan -->
+    {% if top_queried %}
+    <div style="margin-top:2rem;">
+        <div class="section-title">En Çok Sorguladıklarım</div>
+        <div class="query-list">
+            {% for ioc in top_queried %}
+            <a href="{% url 'result' ioc.id %}" class="query-item">
+                <span class="ioc-type-badge">{{ ioc.get_ioc_type_display }}</span>
+                <span class="query-value">{{ ioc.value }}</span>
+                <span class="query-score {{ ioc.threat_score|score_class }}">{{ ioc.threat_score }}/100</span>
+                <span class="query-time">{{ ioc.query_count }} sorgu</span>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Son Sorgularım -->
+    {% if recent_iocs %}
+    <div style="margin-top:2rem;">
+        <div class="section-title">Son Sorgularım</div>
+        <div class="query-list">
+            {% for ioc in recent_iocs %}
+            <a href="{% url 'result' ioc.id %}" class="query-item">
+                <span class="ioc-type-badge">{{ ioc.get_ioc_type_display }}</span>
+                <span class="query-value">{{ ioc.value }}</span>
+                <span class="query-score {{ ioc.threat_score|score_class }}">{{ ioc.threat_score }}/100</span>
+                <span class="query-time">{{ ioc.last_queried|timesince }} önce</span>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if not recent_iocs %}
+    <div class="empty-state" style="margin-top:3rem;">
+        <div class="empty-state-icon">🔍</div>
+        Henüz sorgu yapmadınız. İlk IOC'nizi sorgulayın!
+        <div style="margin-top:1rem;">
+            <a href="{% url 'index' %}" class="btn btn-primary">Sorgula</a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

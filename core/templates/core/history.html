@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+{% load threat_tags %}
+
+{% block title %}Sorgu Geçmişi{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="section-title" style="margin-top:1rem;">Sorgu Geçmişi</div>
+
+    <!-- Filtreler -->
+    <form method="get" class="filters">
+        <a href="{% url 'history' %}" class="filter-btn {% if not current_type %}active{% endif %}">Tümü</a>
+        <a href="?type=ip" class="filter-btn {% if current_type == 'ip' %}active{% endif %}">IP</a>
+        <a href="?type=domain" class="filter-btn {% if current_type == 'domain' %}active{% endif %}">Domain</a>
+        <a href="?type=url" class="filter-btn {% if current_type == 'url' %}active{% endif %}">URL</a>
+        <a href="?type=hash" class="filter-btn {% if current_type == 'hash' %}active{% endif %}">Hash</a>
+        <a href="?type=email" class="filter-btn {% if current_type == 'email' %}active{% endif %}">Email</a>
+
+        <input type="text" name="q" value="{{ search_q }}" placeholder="IOC ara..." class="filter-search">
+        <button type="submit" class="btn btn-sm btn-primary">Ara</button>
+    </form>
+
+    <div style="display:flex;justify-content:flex-end;margin-bottom:1rem;">
+        <a href="{% url 'export_csv' %}" class="btn btn-sm" style="border-color:var(--accent);color:var(--accent);">
+            ↓ CSV İndir
+        </a>
+    </div>
+
+    <!-- Sonuçlar -->
+    <div class="query-list">
+        {% for ioc in iocs %}
+        <a href="{% url 'result' ioc.id %}" class="query-item">
+            <span class="ioc-type-badge">{{ ioc.get_ioc_type_display }}</span>
+            <span class="query-value">{{ ioc.value }}</span>
+            <span class="query-score {{ ioc.threat_score|score_class }}">{{ ioc.threat_score }}/100</span>
+            <span class="query-time">{{ ioc.last_queried|timesince }} önce</span>
+        </a>
+        {% empty %}
+        <div class="empty-state">
+            {% if search_q or current_type %}
+            Filtreye uygun sonuç bulunamadı.
+            {% else %}
+            Henüz sorgu geçmişi yok.
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+    <div style="display:flex;justify-content:center;gap:0.5rem;margin-top:2rem;flex-wrap:wrap;">
+        {% if page_obj.has_previous %}
+        <a href="?page=1{% if current_type %}&type={{ current_type }}{% endif %}{% if search_q %}&q={{ search_q }}{% endif %}"
+           class="btn btn-sm">«</a>
+        <a href="?page={{ page_obj.previous_page_number }}{% if current_type %}&type={{ current_type }}{% endif %}{% if search_q %}&q={{ search_q }}{% endif %}"
+           class="btn btn-sm">‹</a>
+        {% endif %}
+
+        {% for num in page_obj.paginator.page_range %}
+            {% if page_obj.number == num %}
+            <span class="btn btn-sm btn-primary" style="cursor:default;">{{ num }}</span>
+            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+            <a href="?page={{ num }}{% if current_type %}&type={{ current_type }}{% endif %}{% if search_q %}&q={{ search_q }}{% endif %}"
+               class="btn btn-sm">{{ num }}</a>
+            {% endif %}
+        {% endfor %}
+
+        {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}{% if current_type %}&type={{ current_type }}{% endif %}{% if search_q %}&q={{ search_q }}{% endif %}"
+           class="btn btn-sm">›</a>
+        <a href="?page={{ page_obj.paginator.num_pages }}{% if current_type %}&type={{ current_type }}{% endif %}{% if search_q %}&q={{ search_q }}{% endif %}"
+           class="btn btn-sm">»</a>
+        {% endif %}
+    </div>
+    <p style="text-align:center;font-size:0.75rem;color:var(--text-muted);margin-top:0.5rem;">
+        Sayfa {{ page_obj.number }} / {{ page_obj.paginator.num_pages }} · Toplam {{ page_obj.paginator.count }} IOC
+    </p>
+    {% endif %}
+    
+</div>
+{% endblock %}

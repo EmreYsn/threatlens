@@ -1,0 +1,225 @@
+{% extends 'base.html' %}
+{% load threat_tags %}
+
+{% block title %}IOC Karşılaştırma{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="section-title" style="margin-top:1rem;">IOC Karşılaştırma</div>
+
+    <!-- Seçim Formu -->
+    <div class="info-card" style="max-width:800px;">
+        <form method="get" style="display:flex;gap:1rem;align-items:flex-end;flex-wrap:wrap;">
+            <div style="flex:1;min-width:200px;">
+                <label style="font-size:0.8rem;color:var(--text-muted);display:block;margin-bottom:0.3rem;">IOC #1</label>
+                <select name="ioc1" style="width:100%;padding:0.5rem;background:var(--bg-secondary);
+                        color:var(--text);border:1px solid var(--border);border-radius:6px;
+                        font-family:var(--font-mono);font-size:0.85rem;">
+                    <option value="">Seçin...</option>
+                    {% for ioc in all_iocs %}
+                    <option value="{{ ioc.id }}" {% if ioc1 and ioc.id == ioc1.id %}selected{% endif %}>
+                        {{ ioc.value }} ({{ ioc.threat_score }}/100)
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div style="flex:1;min-width:200px;">
+                <label style="font-size:0.8rem;color:var(--text-muted);display:block;margin-bottom:0.3rem;">IOC #2</label>
+                <select name="ioc2" style="width:100%;padding:0.5rem;background:var(--bg-secondary);
+                        color:var(--text);border:1px solid var(--border);border-radius:6px;
+                        font-family:var(--font-mono);font-size:0.85rem;">
+                    <option value="">Seçin...</option>
+                    {% for ioc in all_iocs %}
+                    <option value="{{ ioc.id }}" {% if ioc2 and ioc.id == ioc2.id %}selected{% endif %}>
+                        {{ ioc.value }} ({{ ioc.threat_score }}/100)
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary">Karşılaştır</button>
+        </form>
+    </div>
+
+    <!-- Karşılaştırma Sonuçları -->
+    {% if ioc1 and ioc2 %}
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:2rem;margin-top:2rem;">
+
+        <!-- IOC 1 -->
+        <div>
+            <div style="text-align:center;margin-bottom:1.5rem;">
+                <span class="ioc-type-badge">{{ ioc1.get_ioc_type_display }}</span>
+                <h2 style="font-family:var(--font-mono);font-size:1.1rem;margin-top:0.5rem;">{{ ioc1.value }}</h2>
+                <div class="score-ring" style="margin:1rem auto;">
+                    <svg viewBox="0 0 120 120">
+                        <circle class="ring-bg" cx="60" cy="60" r="54"/>
+                        <circle class="ring-progress" cx="60" cy="60" r="54"
+                                stroke="{{ ioc1.threat_score|score_color }}"
+                                stroke-dasharray="339.292"
+                                stroke-dashoffset="{{ ioc1.threat_score|percentage_of:100 }}"/>
+                    </svg>
+                    <div class="score-text">
+                        <span class="score-number" style="color:{{ ioc1.threat_score|score_color }}">{{ ioc1.threat_score }}</span>
+                        <span class="score-label">{{ ioc1.severity|severity_display }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Skor Breakdown 1 -->
+            {% for item in breakdown1 %}
+            <div class="breakdown-item">
+                <div class="breakdown-header">
+                    <span class="breakdown-source">{{ item.source }}</span>
+                    <span class="breakdown-score {{ item.score|score_class }}">{{ item.score }}/100</span>
+                </div>
+                <div class="breakdown-bar">
+                    <div class="breakdown-fill" style="width:{{ item.score }}%;background:{{ item.score|score_color }};"></div>
+                </div>
+            </div>
+            {% endfor %}
+
+            <!-- Detaylar 1 -->
+            <div class="info-card" style="margin-top:1rem;">
+                {% if ioc1.ioc_type == 'ip' %}
+                <div class="info-row">
+                    <span class="info-key">ISP</span>
+                    <span class="info-value">{{ ioc1.isp|default:"-" }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-key">Ülke</span>
+                    <span class="info-value">{{ ioc1.country|default:"-" }}</span>
+                </div>
+                {% if ioc1.shodan_data %}
+                <div class="info-row">
+                    <span class="info-key">Açık Port</span>
+                    <span class="info-value">{{ ioc1.shodan_data.port_count|default:"0" }}</span>
+                </div>
+                {% endif %}
+                {% endif %}
+                {% if ioc1.virustotal_data %}
+                <div class="info-row">
+                    <span class="info-key">VT Kötü</span>
+                    <span class="info-value score-critical">{{ ioc1.virustotal_data.malicious }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-key">VT Reputation</span>
+                    <span class="info-value">{{ ioc1.virustotal_data.reputation }}</span>
+                </div>
+                {% endif %}
+                {% if ioc1.alienvault_data %}
+                <div class="info-row">
+                    <span class="info-key">OTX Pulse</span>
+                    <span class="info-value">{{ ioc1.alienvault_data.pulse_count }}</span>
+                </div>
+                {% endif %}
+                {% if ioc1.whois_data and ioc1.whois_data.domain_age_days %}
+                <div class="info-row">
+                    <span class="info-key">Domain Yaşı</span>
+                    <span class="info-value">{{ ioc1.whois_data.domain_age_days }} gün</span>
+                </div>
+                {% endif %}
+                <div class="info-row">
+                    <span class="info-key">Sorgu Sayısı</span>
+                    <span class="info-value">{{ ioc1.query_count }}</span>
+                </div>
+            </div>
+
+            <div style="text-align:center;margin-top:1rem;">
+                <a href="{% url 'result' ioc1.id %}" class="btn btn-sm">Detaya Git →</a>
+            </div>
+        </div>
+
+        <!-- IOC 2 -->
+        <div>
+            <div style="text-align:center;margin-bottom:1.5rem;">
+                <span class="ioc-type-badge">{{ ioc2.get_ioc_type_display }}</span>
+                <h2 style="font-family:var(--font-mono);font-size:1.1rem;margin-top:0.5rem;">{{ ioc2.value }}</h2>
+                <div class="score-ring" style="margin:1rem auto;">
+                    <svg viewBox="0 0 120 120">
+                        <circle class="ring-bg" cx="60" cy="60" r="54"/>
+                        <circle class="ring-progress" cx="60" cy="60" r="54"
+                                stroke="{{ ioc2.threat_score|score_color }}"
+                                stroke-dasharray="339.292"
+                                stroke-dashoffset="{{ ioc2.threat_score|percentage_of:100 }}"/>
+                    </svg>
+                    <div class="score-text">
+                        <span class="score-number" style="color:{{ ioc2.threat_score|score_color }}">{{ ioc2.threat_score }}</span>
+                        <span class="score-label">{{ ioc2.severity|severity_display }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Skor Breakdown 2 -->
+            {% for item in breakdown2 %}
+            <div class="breakdown-item">
+                <div class="breakdown-header">
+                    <span class="breakdown-source">{{ item.source }}</span>
+                    <span class="breakdown-score {{ item.score|score_class }}">{{ item.score }}/100</span>
+                </div>
+                <div class="breakdown-bar">
+                    <div class="breakdown-fill" style="width:{{ item.score }}%;background:{{ item.score|score_color }};"></div>
+                </div>
+            </div>
+            {% endfor %}
+
+            <!-- Detaylar 2 -->
+            <div class="info-card" style="margin-top:1rem;">
+                {% if ioc2.ioc_type == 'ip' %}
+                <div class="info-row">
+                    <span class="info-key">ISP</span>
+                    <span class="info-value">{{ ioc2.isp|default:"-" }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-key">Ülke</span>
+                    <span class="info-value">{{ ioc2.country|default:"-" }}</span>
+                </div>
+                {% if ioc2.shodan_data %}
+                <div class="info-row">
+                    <span class="info-key">Açık Port</span>
+                    <span class="info-value">{{ ioc2.shodan_data.port_count|default:"0" }}</span>
+                </div>
+                {% endif %}
+                {% endif %}
+                {% if ioc2.virustotal_data %}
+                <div class="info-row">
+                    <span class="info-key">VT Kötü</span>
+                    <span class="info-value score-critical">{{ ioc2.virustotal_data.malicious }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-key">VT Reputation</span>
+                    <span class="info-value">{{ ioc2.virustotal_data.reputation }}</span>
+                </div>
+                {% endif %}
+                {% if ioc2.alienvault_data %}
+                <div class="info-row">
+                    <span class="info-key">OTX Pulse</span>
+                    <span class="info-value">{{ ioc2.alienvault_data.pulse_count }}</span>
+                </div>
+                {% endif %}
+                {% if ioc2.whois_data and ioc2.whois_data.domain_age_days %}
+                <div class="info-row">
+                    <span class="info-key">Domain Yaşı</span>
+                    <span class="info-value">{{ ioc2.whois_data.domain_age_days }} gün</span>
+                </div>
+                {% endif %}
+                <div class="info-row">
+                    <span class="info-key">Sorgu Sayısı</span>
+                    <span class="info-value">{{ ioc2.query_count }}</span>
+                </div>
+            </div>
+
+            <div style="text-align:center;margin-top:1rem;">
+                <a href="{% url 'result' ioc2.id %}" class="btn btn-sm">Detaya Git →</a>
+            </div>
+        </div>
+    </div>
+    {% elif ioc1 or ioc2 %}
+    <div class="empty-state" style="margin-top:2rem;">
+        Karşılaştırma için iki IOC seçmelisiniz.
+    </div>
+    {% endif %}
+
+    <div style="margin-top:2rem;">
+        <a href="{% url 'index' %}" class="btn">← Ana Sayfa</a>
+    </div>
+</div>
+{% endblock %}

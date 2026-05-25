@@ -1,0 +1,7 @@
+django>=5.0
+python-decouple
+requests
+reportlab
+python-whois
+shodan
+djangorestframework

@@ -1,0 +1,320 @@
+{% extends 'base.html' %}
+{% load threat_tags %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="section-title" style="margin-top:1rem;">Dashboard</div>
+
+    <!-- Stats Cards -->
+    <div class="stats-bar">
+        <div class="stat-item">
+            <div class="stat-number">{{ total_iocs }}</div>
+            <div class="stat-label">Toplam IOC</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number score-critical">{{ critical_count }}</div>
+            <div class="stat-label">Kritik Tehdit</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number score-suspicious">{{ suspicious_count }}</div>
+            <div class="stat-label">Şüpheli</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number score-safe">{{ safe_count }}</div>
+            <div class="stat-label">Güvenli</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number">{{ total_queries }}</div>
+            <div class="stat-label">Toplam Sorgu</div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="info-grid" style="margin-top:2rem;">
+        <!-- IOC Type Distribution -->
+        <div class="info-card">
+            <div class="info-card-title">◎ IOC Tip Dağılımı</div>
+            <canvas id="typeChart" width="300" height="300"></canvas>
+        </div>
+
+        <!-- Severity Distribution -->
+        <div class="info-card">
+            <div class="info-card-title">⚑ Tehdit Seviyesi Dağılımı</div>
+            <canvas id="severityChart" width="300" height="300"></canvas>
+        </div>
+
+        <!-- Recent Trend -->
+        <div class="info-card">
+            <div class="info-card-title">↗ Son 7 Gün Sorgu Trendi</div>
+            <canvas id="trendChart" width="300" height="300"></canvas>
+        </div>
+    </div>
+
+    <!-- Gelişmiş Zaman Serisi -->
+    <div class="info-card" style="margin-top:2rem;">
+        <div class="info-card-title">📊 Son 30 Gün — Tehdit Analizi</div>
+        <canvas id="advancedTrendChart" height="120"></canvas>
+    </div>
+
+    <!-- Top Threats -->
+    <div style="margin-top:2rem;">
+        <div class="section-title">En Tehlikeli IOC'ler</div>
+        <div class="query-list">
+            {% for ioc in top_threats %}
+            <a href="{% url 'result' ioc.id %}" class="query-item">
+                <span class="ioc-type-badge">{{ ioc.get_ioc_type_display }}</span>
+                <span class="query-value">{{ ioc.value }}</span>
+                <span class="query-score {{ ioc.threat_score|score_class }}">{{ ioc.threat_score }}/100</span>
+                <span class="query-time">{{ ioc.query_count }} sorgu</span>
+            </a>
+            {% empty %}
+            <div class="empty-state">Henüz veri yok. İlk sorgunuzu yapın!</div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Recent Queries -->
+    <div style="margin-top:2rem;">
+        <div class="section-title">Son Sorgular</div>
+        <div class="query-list">
+            {% for ioc in recent_iocs %}
+            <a href="{% url 'result' ioc.id %}" class="query-item">
+                <span class="ioc-type-badge">{{ ioc.get_ioc_type_display }}</span>
+                <span class="query-value">{{ ioc.value }}</span>
+                <span class="query-score {{ ioc.threat_score|score_class }}">{{ ioc.threat_score }}/100</span>
+                <span class="query-time">{{ ioc.last_queried|timesince }} önce</span>
+            </a>
+            {% empty %}
+            <div class="empty-state">Henüz sorgu yapılmamış.</div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Tüm IOC'lerin Haritası -->
+    {% if map_data %}
+    <div class="map-container" style="margin-top:2rem;">
+        <div class="section-title">Coğrafi Dağılım</div>
+        <div id="dashboard-map" style="height:400px;"></div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        try {
+            var map = L.map('dashboard-map').setView([30, 0], 2);
+
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; OpenStreetMap &copy; CARTO',
+                maxZoom: 19
+            }).addTo(map);
+
+            var mapData = {{ map_data|safe }};
+
+            mapData.forEach(function(item) {
+                var lat = parseFloat(item.lat);
+                var lon = parseFloat(item.lon);
+                if (isNaN(lat) || isNaN(lon)) return;
+
+                var color = item.score <= 30 ? '#00b894' : item.score <= 60 ? '#fdcb6e' : '#e74c3c';
+
+                var icon = L.divIcon({
+                    html: '<div style="background:' + color + ';width:12px;height:12px;border-radius:50%;border:2px solid white;box-shadow:0 0 8px ' + color + ';"></div>',
+                    className: '',
+                    iconSize: [16, 16],
+                    iconAnchor: [8, 8]
+                });
+
+                L.marker([lat, lon], {icon: icon}).addTo(map)
+                    .bindPopup(
+                        '<div style="font-family:monospace;font-size:12px;">' +
+                        '<b>' + item.value + '</b><br>' +
+                        'Skor: <span style="color:' + color + ';">' + item.score + '/100</span><br>' +
+                        item.city + ', ' + item.country +
+                        '</div>'
+                    );
+            });
+
+            setTimeout(function() { map.invalidateSize(); }, 200);
+
+        } catch(e) {
+            console.log('Dashboard harita hatası:', e);
+        }
+    });
+    </script>
+    {% endif %}
+
+    <!-- Country Stats -->
+    {% if country_stats %}
+    <div style="margin-top:2rem;">
+        <div class="section-title">Ülke Dağılımı</div>
+        <div class="info-grid">
+            {% for cs in country_stats %}
+            <div class="info-card" style="text-align:center;">
+                <div style="font-size:2rem;">{{ cs.country_code }}</div>
+                <div style="font-size:1.5rem;font-weight:700;color:var(--accent);">{{ cs.count }}</div>
+                <div style="font-size:0.8rem;color:var(--text-muted);">{{ cs.country }}</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const textColor = isDark ? '#a0aec0' : '#4a5568';
+    const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+
+    Chart.defaults.color = textColor;
+    Chart.defaults.font.family = "'IBM Plex Mono', monospace";
+
+    // IOC Type Pie Chart
+    const typeData = {{ type_stats|safe }};
+    if (typeData && Object.keys(typeData).length > 0) {
+        new Chart(document.getElementById('typeChart'), {
+            type: 'doughnut',
+            data: {
+                labels: Object.keys(typeData),
+                datasets: [{
+                    data: Object.values(typeData),
+                    backgroundColor: ['#00b894', '#0984e3', '#e17055', '#6c5ce7', '#fdcb6e'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'bottom', labels: { padding: 15 } }
+                }
+            }
+        });
+    }
+
+    // Severity Pie Chart
+    const sevData = {{ severity_stats|safe }};
+    if (sevData && Object.keys(sevData).length > 0) {
+        new Chart(document.getElementById('severityChart'), {
+            type: 'doughnut',
+            data: {
+                labels: Object.keys(sevData),
+                datasets: [{
+                    data: Object.values(sevData),
+                    backgroundColor: ['#00b894', '#fdcb6e', '#e74c3c'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'bottom', labels: { padding: 15 } }
+                }
+            }
+        });
+    }
+
+    // Trend Line Chart
+    const trendData = {{ trend_data|safe }};
+    if (trendData && trendData.labels && trendData.labels.length > 0) {
+        new Chart(document.getElementById('trendChart'), {
+            type: 'line',
+            data: {
+                labels: trendData.labels,
+                datasets: [{
+                    label: 'Sorgular',
+                    data: trendData.values,
+                    borderColor: '#00b894',
+                    backgroundColor: 'rgba(0,184,148,0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#00b894'
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { color: gridColor } },
+                    x: { grid: { color: gridColor } }
+                },
+                plugins: {
+                    legend: { display: false }
+                }
+            }
+        });
+    }
+
+    // Gelişmiş 30 Günlük Trend
+    const advTrendData = {{ trend_30_data|safe }};
+    if (advTrendData && advTrendData.labels && advTrendData.labels.length > 0) {
+        new Chart(document.getElementById('advancedTrendChart'), {
+            type: 'bar',
+            data: {
+                labels: advTrendData.labels,
+                datasets: [
+                    {
+                        label: 'Güvenli',
+                        data: advTrendData.safe,
+                        backgroundColor: '#00b894',
+                        borderRadius: 3,
+                        order: 2
+                    },
+                    {
+                        label: 'Şüpheli',
+                        data: advTrendData.suspicious,
+                        backgroundColor: '#fdcb6e',
+                        borderRadius: 3,
+                        order: 2
+                    },
+                    {
+                        label: 'Tehlikeli',
+                        data: advTrendData.malicious,
+                        backgroundColor: '#e74c3c',
+                        borderRadius: 3,
+                        order: 2
+                    },
+                    {
+                        label: 'Toplam Sorgu',
+                        data: advTrendData.total,
+                        type: 'line',
+                        borderColor: '#0984e3',
+                        backgroundColor: 'rgba(9,132,227,0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 2,
+                        borderWidth: 2,
+                        order: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                interaction: { mode: 'index', intersect: false },
+                scales: {
+                    x: {
+                        stacked: true,
+                        grid: { color: gridColor },
+                        ticks: { maxTicksLimit: 15, font: { size: 10 } }
+                    },
+                    y: {
+                        stacked: true,
+                        beginAtZero: true,
+                        ticks: { stepSize: 1 },
+                        grid: { color: gridColor }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { padding: 15, usePointStyle: true, pointStyle: 'circle' }
+                    }
+                }
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

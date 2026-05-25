@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+
+{% block title %}404 — Sayfa Bulunamadı{% endblock %}
+
+{% block content %}
+<div class="container" style="text-align:center;padding-top:4rem;">
+    <div style="font-size:6rem;font-family:var(--font-mono);color:var(--accent);font-weight:700;">
+        404
+    </div>
+    <h1 style="font-family:var(--font-mono);font-size:1.3rem;margin-top:0.5rem;">
+        Sayfa Bulunamadı
+    </h1>
+    <p style="color:var(--text-muted);font-size:0.9rem;margin-top:0.5rem;margin-bottom:2rem;">
+        Aradığınız sayfa mevcut değil veya taşınmış olabilir.
+    </p>
+    <div style="display:flex;gap:1rem;justify-content:center;">
+        <a href="{% url 'index' %}" class="btn btn-primary">← Ana Sayfa</a>
+        <a href="{% url 'dashboard' %}" class="btn">Dashboard</a>
+    </div>
+</div>
+{% endblock %}

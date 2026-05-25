@@ -1,0 +1,235 @@
+{% extends 'base.html' %}
+
+{% block title %}API Dokümantasyonu{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width:900px;">
+    <div style="margin-top:1.5rem;margin-bottom:2rem;">
+        <h1 style="font-family:var(--font-mono);font-size:1.5rem;">
+            <span style="color:var(--accent);">›_</span> ThreatLens API
+        </h1>
+        <p style="color:var(--text-muted);font-size:0.9rem;">
+            REST API ile programatik olarak IOC sorgulama, tehdit analizi ve istatistik verilerine erişin.
+        </p>
+    </div>
+
+    <!-- Authentication -->
+    <div class="info-card" style="margin-bottom:1.5rem;">
+        <div class="info-card-title">🔑 Authentication</div>
+        <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:1rem;">
+            Tüm API isteklerinde <code style="color:var(--accent);">X-API-Key</code> header'ı gereklidir.
+            API key'inizi profil sayfanızdan alabilirsiniz.
+        </p>
+        <div style="background:var(--bg-secondary);padding:1rem;border-radius:8px;font-family:var(--font-mono);font-size:0.8rem;overflow-x:auto;">
+            <span style="color:#e74c3c;">curl</span> -H <span style="color:#00b894;">"X-API-Key: YOUR_API_KEY"</span> \<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;http://localhost:8000/api/search/?q=8.8.8.8
+        </div>
+        <div style="margin-top:0.75rem;">
+            <span style="font-size:0.8rem;color:var(--text-muted);">Rate Limit:</span>
+            <span style="font-size:0.8rem;color:var(--accent);">100 istek/gün</span>
+        </div>
+    </div>
+
+    <!-- Endpoints -->
+    <div class="section-title">Endpoints</div>
+
+    <!-- Search -->
+    <div class="info-card" style="margin-bottom:1.5rem;">
+        <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;">
+            <span style="background:#00b894;color:white;padding:0.2rem 0.6rem;border-radius:4px;
+                         font-family:var(--font-mono);font-size:0.75rem;font-weight:700;">GET</span>
+            <code style="font-size:0.9rem;color:var(--text);">/api/search/?q={ioc}</code>
+        </div>
+        <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:1rem;">
+            IOC sorgula. IP, domain, URL, hash veya email kabul eder. Tüm entegre kaynaklardan veri toplar ve tehdit skoru hesaplar.
+        </p>
+
+        <div style="font-size:0.8rem;font-weight:600;margin-bottom:0.5rem;">Parametreler:</div>
+        <div class="info-row">
+            <span class="info-key"><code>q</code> (zorunlu)</span>
+            <span class="info-value" style="font-size:0.8rem;">Sorgulanacak IOC değeri</span>
+        </div>
+
+        <div style="font-size:0.8rem;font-weight:600;margin-top:1rem;margin-bottom:0.5rem;">Örnek İstek:</div>
+        <div style="background:var(--bg-secondary);padding:0.75rem;border-radius:8px;font-family:var(--font-mono);font-size:0.75rem;overflow-x:auto;">
+            GET /api/search/?q=8.8.8.8
+        </div>
+
+        <div style="font-size:0.8rem;font-weight:600;margin-top:1rem;margin-bottom:0.5rem;">Örnek Yanıt:</div>
+        <div style="background:var(--bg-secondary);padding:0.75rem;border-radius:8px;font-family:var(--font-mono);font-size:0.7rem;overflow-x:auto;">
+<pre style="margin:0;color:var(--text);">{
+  "success": true,
+  "response_time_ms": 3470,
+  "sources": ["abuseipdb", "virustotal", "alienvault", "shodan", "ipinfo"],
+  "data": {
+    "value": "8.8.8.8",
+    "ioc_type": "ip",
+    "threat_score": 0,
+    "severity": "safe",
+    "severity_display": "Güvenli",
+    "country": "United States of America",
+    "abuseipdb_data": { ... },
+    "virustotal_data": { ... },
+    "shodan_data": { ... },
+    "score_breakdown": [
+      {"source": "AbuseIPDB", "score": 0, "weight": 35},
+      {"source": "VirusTotal", "score": 0, "weight": 40},
+      ...
+    ]
+  }
+}</pre>
+        </div>
+    </div>
+
+    <!-- IOC Detail -->
+    <div class="info-card" style="margin-bottom:1.5rem;">
+        <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;">
+            <span style="background:#00b894;color:white;padding:0.2rem 0.6rem;border-radius:4px;
+                         font-family:var(--font-mono);font-size:0.75rem;font-weight:700;">GET</span>
+            <code style="font-size:0.9rem;color:var(--text);">/api/ioc/{uuid}/</code>
+        </div>
+        <p style="font-size:0.85rem;color:var(--text-muted);">
+            Daha önce sorgulanan bir IOC'nin detay bilgilerini getirir. Yeni API çağrısı yapmaz, cache'deki veriyi döner.
+        </p>
+    </div>
+
+    <!-- History -->
+    <div class="info-card" style="margin-bottom:1.5rem;">
+        <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;">
+            <span style="background:#00b894;color:white;padding:0.2rem 0.6rem;border-radius:4px;
+                         font-family:var(--font-mono);font-size:0.75rem;font-weight:700;">GET</span>
+            <code style="font-size:0.9rem;color:var(--text);">/api/history/</code>
+        </div>
+        <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:0.75rem;">
+            Sorgu geçmişini listeler. Opsiyonel filtre parametreleri destekler.
+        </p>
+        <div class="info-row">
+            <span class="info-key"><code>type</code> (opsiyonel)</span>
+            <span class="info-value" style="font-size:0.8rem;">ip, domain, url, hash, email</span>
+        </div>
+        <div class="info-row">
+            <span class="info-key"><code>page</code> (opsiyonel)</span>
+            <span class="info-value" style="font-size:0.8rem;">Sayfa numarası (varsayılan: 1)</span>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="info-card" style="margin-bottom:1.5rem;">
+        <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;">
+            <span style="background:#00b894;color:white;padding:0.2rem 0.6rem;border-radius:4px;
+                         font-family:var(--font-mono);font-size:0.75rem;font-weight:700;">GET</span>
+            <code style="font-size:0.9rem;color:var(--text);">/api/stats/</code>
+        </div>
+        <p style="font-size:0.85rem;color:var(--text-muted);">
+            Genel istatistikler: toplam IOC, sorgu sayısı, tip dağılımı, severity dağılımı ve son sorgular.
+        </p>
+    </div>
+
+    <!-- My Key -->
+    <div class="info-card" style="margin-bottom:1.5rem;">
+        <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;">
+            <span style="background:#00b894;color:white;padding:0.2rem 0.6rem;border-radius:4px;
+                         font-family:var(--font-mono);font-size:0.75rem;font-weight:700;">GET</span>
+            <code style="font-size:0.9rem;color:var(--text);">/api/my-key/</code>
+        </div>
+        <p style="font-size:0.85rem;color:var(--text-muted);">
+            API key bilgilerinizi ve günlük kullanım durumunuzu görüntüleyin.
+        </p>
+    </div>
+
+    <!-- Desteklenen IOC Tipleri -->
+    <div class="section-title">Desteklenen IOC Tipleri</div>
+    <div class="info-card" style="margin-bottom:1.5rem;">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1rem;">
+            <div>
+                <div style="font-weight:600;font-size:0.85rem;margin-bottom:0.3rem;">IP Adresi</div>
+                <div style="font-size:0.75rem;color:var(--text-muted);">IPv4 ve IPv6</div>
+                <code style="font-size:0.7rem;color:var(--accent);">8.8.8.8</code>
+            </div>
+            <div>
+                <div style="font-weight:600;font-size:0.85rem;margin-bottom:0.3rem;">Domain</div>
+                <div style="font-size:0.75rem;color:var(--text-muted);">Alan adları</div>
+                <code style="font-size:0.7rem;color:var(--accent);">example.com</code>
+            </div>
+            <div>
+                <div style="font-weight:600;font-size:0.85rem;margin-bottom:0.3rem;">URL</div>
+                <div style="font-size:0.75rem;color:var(--text-muted);">Web adresleri</div>
+                <code style="font-size:0.7rem;color:var(--accent);">https://evil.com/mal</code>
+            </div>
+            <div>
+                <div style="font-weight:600;font-size:0.85rem;margin-bottom:0.3rem;">Hash</div>
+                <div style="font-size:0.75rem;color:var(--text-muted);">MD5, SHA1, SHA256</div>
+                <code style="font-size:0.7rem;color:var(--accent);">44d88612fea...</code>
+            </div>
+            <div>
+                <div style="font-weight:600;font-size:0.85rem;margin-bottom:0.3rem;">Email</div>
+                <div style="font-size:0.75rem;color:var(--text-muted);">E-posta adresleri</div>
+                <code style="font-size:0.7rem;color:var(--accent);">user@example.com</code>
+            </div>
+        </div>
+    </div>
+
+    <!-- Kaynaklar -->
+    <div class="section-title">Entegre Kaynaklar</div>
+    <div class="info-card" style="margin-bottom:1.5rem;">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;">
+            <div>
+                <div style="font-weight:600;font-size:0.85rem;">🛡 AbuseIPDB</div>
+                <div style="font-size:0.75rem;color:var(--text-muted);">IP abuse raporları</div>
+            </div>
+            <div>
+                <div style="font-weight:600;font-size:0.85rem;">⬡ VirusTotal</div>
+                <div style="font-size:0.75rem;color:var(--text-muted);">90+ AV motoru analizi</div>
+            </div>
+            <div>
+                <div style="font-weight:600;font-size:0.85rem;">◈ AlienVault OTX</div>
+                <div style="font-size:0.75rem;color:var(--text-muted);">Tehdit istihbaratı pulse'ları</div>
+            </div>
+            <div>
+                <div style="font-weight:600;font-size:0.85rem;">⚡ Shodan</div>
+                <div style="font-size:0.75rem;color:var(--text-muted);">Port tarama ve servis tespiti</div>
+            </div>
+            <div>
+                <div style="font-weight:600;font-size:0.85rem;">⊕ ipinfo.io</div>
+                <div style="font-size:0.75rem;color:var(--text-muted);">IP geolocation ve ASN</div>
+            </div>
+            <div>
+                <div style="font-weight:600;font-size:0.85rem;">⊞ WHOIS</div>
+                <div style="font-size:0.75rem;color:var(--text-muted);">Domain kayıt bilgileri</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- HTTP Status Codes -->
+    <div class="section-title">HTTP Durum Kodları</div>
+    <div class="info-card">
+        <div class="info-row">
+            <span class="info-key"><span style="color:#00b894;">200</span> OK</span>
+            <span class="info-value" style="font-size:0.8rem;">İstek başarılı</span>
+        </div>
+        <div class="info-row">
+            <span class="info-key"><span style="color:#fdcb6e;">400</span> Bad Request</span>
+            <span class="info-value" style="font-size:0.8rem;">Geçersiz parametre veya IOC formatı</span>
+        </div>
+        <div class="info-row">
+            <span class="info-key"><span style="color:#e74c3c;">401</span> Unauthorized</span>
+            <span class="info-value" style="font-size:0.8rem;">Geçersiz veya eksik API key</span>
+        </div>
+        <div class="info-row">
+            <span class="info-key"><span style="color:#e74c3c;">403</span> Forbidden</span>
+            <span class="info-value" style="font-size:0.8rem;">Erişim engellendi veya rate limit</span>
+        </div>
+        <div class="info-row">
+            <span class="info-key"><span style="color:#e74c3c;">404</span> Not Found</span>
+            <span class="info-value" style="font-size:0.8rem;">IOC bulunamadı</span>
+        </div>
+    </div>
+
+    <div style="margin-top:2rem;">
+        <a href="{% url 'index' %}" class="btn">← Ana Sayfa</a>
+        {% if user.is_authenticated %}
+        <a href="{% url 'profile' %}" class="btn btn-primary" style="margin-left:0.5rem;">Profil & API Key</a>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
