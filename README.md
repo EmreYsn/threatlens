@@ -86,7 +86,7 @@ ThreatLens, siber güvenlik analistleri için geliştirilmiş bir **OSINT (Açı
 
 ```bash
 # 1. Projeyi klonla
-git clone https://github.com/KULLANICI_ADI/threatlens.git
+git clone https://github.com/EmreYsn/threatlens.git
 cd threatlens
 
 # 2. Virtual environment oluştur
@@ -250,7 +250,7 @@ ThreatLens, her IOC tipine göre farklı ağırlıklarla çoklu kaynak tehdit sk
 
 **Yasin Emre**
 - Web: [ysnemre.com](https://ysnemre.com)
-- GitHub: [github.com/KULLANICI_ADI](https://github.com/KULLANICI_ADI)
+- GitHub: [github.com/EmreYsn](https://github.com/EmreYsn)
 
 ---
 
