@@ -233,6 +233,17 @@ def search(request):
             if whois_result['success']:
                 ioc.whois_data = whois_result['data']
 
+    # API'lerden veri geldi mi kontrol et
+    any_success = any(
+        r.get('success') for r in api_results.values()
+    )
+
+    if not any_success and created:
+        # Hiçbir API'den veri gelmedi ve yeni IOC ise, sil
+        ioc.delete()
+        messages.error(request, f'"{query}" için hiçbir kaynaktan veri alınamadı. Lütfen geçerli bir IOC girin.')
+        return redirect('index')
+
     # Tehdit skoru hesapla
     score, breakdown = calculate_threat_score(ioc_type, api_results)
     ioc.threat_score = score

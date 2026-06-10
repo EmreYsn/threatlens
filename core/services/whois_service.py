@@ -97,16 +97,17 @@ def check_domain(domain):
             }
         }
 
-    except whois.parser.PywhoisError:
-        return {
-            'success': True,
-            'data': {
-                'domain': domain,
-                'found': False,
-                'message': 'Domain WHOIS kaydı bulunamadı',
-            }
-        }
     except Exception as e:
+        error_msg = str(e).lower()
+        if 'no output' in error_msg or 'no match' in error_msg or 'no whois' in error_msg:
+            return {
+                'success': True,
+                'data': {
+                    'domain': domain,
+                    'found': False,
+                    'message': 'Domain WHOIS kaydı bulunamadı',
+                }
+            }
         return {'success': False, 'error': str(e)}
 
 
